@@ -1,4 +1,5 @@
 use serde::Serialize;
+use std::sync::mpsc::Sender;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Copy)]
@@ -8,7 +9,7 @@ pub enum OutputMode {
     Silent,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum TelemetryEvent {
     HealthChanged {
@@ -52,14 +53,25 @@ pub enum TelemetryEvent {
 
 pub struct EventSink {
     mode: OutputMode,
+    sender: Option<Sender<TelemetryEvent>>,
 }
 
 impl EventSink {
     pub fn new(mode: OutputMode) -> Self {
-        Self { mode }
+        Self { mode, sender: None }
+    }
+
+    pub fn channel(sender: Sender<TelemetryEvent>) -> Self {
+        Self {
+            mode: OutputMode::Silent,
+            sender: Some(sender),
+        }
     }
 
     pub fn emit(&self, event: &TelemetryEvent) {
+        if let Some(sender) = &self.sender {
+            let _ = sender.send(event.clone());
+        }
         match self.mode {
             OutputMode::Silent => {}
             OutputMode::Json => {

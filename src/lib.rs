@@ -1,4 +1,6 @@
 pub mod db;
+pub mod features;
+pub mod live;
 pub mod model;
 pub mod scanner;
 pub mod telemetry;

@@ -162,6 +162,21 @@ impl Index {
         Ok(())
     }
 
+    pub fn delete_subtree(&self, root_id: i64, relative_path: &[u8]) -> Result<u64> {
+        let removed = self.connection.execute(
+            "DELETE FROM entries
+             WHERE root_id=?1 AND (
+                 relative_path=?2 OR (
+                     length(relative_path)>length(?2)
+                     AND substr(relative_path, 1, length(?2))=?2
+                     AND substr(relative_path, length(?2)+1, 1)=x'2F'
+                 )
+             )",
+            params![root_id, relative_path],
+        )?;
+        Ok(removed as u64)
+    }
+
     pub fn finish_scan(
         &self,
         root_id: i64,
@@ -198,7 +213,7 @@ impl Index {
         let normalized = query.to_lowercase();
         let use_fts = normalized.chars().count() >= 3;
         let sql = if use_fts {
-            "SELECT e.id, r.path, e.display_path, e.display_name, e.kind, e.size
+            "SELECT e.id, r.path, e.display_path, e.display_name, e.kind, e.size, e.mtime_ns
              FROM entries_fts
              JOIN entries e ON e.id=entries_fts.rowid
              JOIN roots r ON r.id=e.root_id
@@ -206,7 +221,7 @@ impl Index {
              ORDER BY length(e.display_name), e.display_name
              LIMIT ?2"
         } else {
-            "SELECT e.id, r.path, e.display_path, e.display_name, e.kind, e.size
+            "SELECT e.id, r.path, e.display_path, e.display_name, e.kind, e.size, e.mtime_ns
              FROM entries e
              JOIN roots r ON r.id=e.root_id
              WHERE instr(e.normalized_name, ?1)>0
@@ -233,6 +248,7 @@ impl Index {
                 name: row.get(3)?,
                 kind: crate::model::EntryKind::from_i64(row.get(4)?),
                 size: row.get::<_, i64>(5)? as u64,
+                modified_ns: row.get(6)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)

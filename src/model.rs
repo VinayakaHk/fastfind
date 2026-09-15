@@ -43,16 +43,17 @@ pub struct IndexedEntry {
     pub mtime_ns: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct SearchResult {
     pub id: i64,
     pub path: String,
     pub name: String,
     pub kind: EntryKind,
     pub size: u64,
+    pub modified_ns: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RootStatus {
     pub id: i64,
     pub path: String,

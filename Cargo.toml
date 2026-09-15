@@ -13,6 +13,23 @@ rusqlite = { version = "=0.31.0", features = ["bundled"] }
 serde = { version = "=1.0.203", features = ["derive"] }
 serde_json = "=1.0.117"
 walkdir = "=2.5.0"
+eframe = { version = "=0.27.2", default-features = false, features = ["default_fonts", "glow", "x11"] }
+chrono = { version = "=0.4.38", default-features = false, features = ["clock"] }
+# Pin a Rust 1.75-compatible transitive URL/IDNA backend.
+idna_adapter = "=1.2.0"
+# Newer home releases use the Rust 2024 manifest format.
+home = "=0.5.9"
+# Keep the clipboard backend on its Rust 1.65+ manifest release.
+smithay-clipboard = "=0.7.2"
+# Preserve the pre-2024 manifest used by the eframe dependency graph.
+indexmap = "=2.2.6"
+# 0.32.13 switched to an edition-2024 manifest; 0.32.12 supports Rust 1.71.
+wayland-protocols = "=0.32.12"
+# Keep generated Wayland bindings on the Rust 1.71 scanner line.
+wayland-scanner = "=0.31.10"
+# ICU 1.x accepts this pre-MS​​RV-bump litemap release.
+litemap = "=0.7.3"
+notify = "=6.1.1"
 
 [dev-dependencies]
 tempfile = "=3.10.1"

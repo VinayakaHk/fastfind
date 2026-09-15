@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=FastFind
+GenericName=File Search
+Comment=Instantly search indexed filenames and folders
+Exec=@FASTFIND_GUI@
+TryExec=@FASTFIND_GUI_PATH@
+Icon=fastfind
+Terminal=false
+Categories=Utility;FileTools;
+Keywords=search;find;files;folders;index;filesystem;
+StartupNotify=true
+StartupWMClass=fastfind-gui
+DBusActivatable=false

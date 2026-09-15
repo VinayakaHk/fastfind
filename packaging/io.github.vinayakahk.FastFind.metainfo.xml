@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.vinayakahk.FastFind</id>
+  <name>FastFind</name>
+  <summary>Instant filename search for Linux</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>FastFind builds a private local filename index and provides immediate searches from a native Linux desktop window.</p>
+  </description>
+  <launchable type="desktop-id">fastfind.desktop</launchable>
+  <provides>
+    <binary>fastfind-gui</binary>
+    <binary>fastfind</binary>
+  </provides>
+  <categories>
+    <category>Utility</category>
+    <category>FileTools</category>
+  </categories>
+  <developer_name>VinayakaHK</developer_name>
+  <url type="homepage">https://github.com/VinayakaHk/fastfind</url>
+</component>

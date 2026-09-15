@@ -1,5 +1,6 @@
 /target/
 /.toolchain/
+/.ui-test-venv/
 *.db
 *.db-shm
 *.db-wal
