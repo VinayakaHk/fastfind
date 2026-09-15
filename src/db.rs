@@ -220,16 +220,28 @@ impl Index {
         options: crate::query::SearchOptions,
     ) -> Result<Vec<SearchResult>> {
         let query = crate::query::parse(query, options)?;
-        if query.path_terms.is_empty() && !query.match_path && query.name_terms.len() == 1 {
+        if query.path_terms.is_empty()
+            && !query.match_path
+            && query.name_terms.len() == 1
+            && !crate::query::has_wildcards(&query.name_terms[0])
+        {
             return self.search_filename_term(&query.name_terms[0], limit);
         }
 
         let mut clauses = Vec::new();
         let mut values = Vec::<Value>::new();
         for term in &query.name_terms {
-            if query.match_path {
+            let wildcard = crate::query::has_wildcards(term);
+            if query.match_path && wildcard {
+                clauses.push("(lower(e.display_name) GLOB ? OR lower(r.path || '/' || e.display_path) GLOB ?)");
+                values.push(term.clone().into());
+                values.push(term.clone().into());
+            } else if query.match_path {
                 clauses.push("(instr(e.normalized_name, ?) > 0 OR instr(lower(r.path || '/' || e.display_path), ?) > 0)");
                 values.push(term.clone().into());
+                values.push(term.clone().into());
+            } else if wildcard {
+                clauses.push("lower(e.display_name) GLOB ?");
                 values.push(term.clone().into());
             } else {
                 clauses.push("instr(e.normalized_name, ?) > 0");
@@ -237,7 +249,11 @@ impl Index {
             }
         }
         for term in &query.path_terms {
-            clauses.push("instr(lower(r.path || '/' || e.display_path), ?) > 0");
+            if crate::query::has_wildcards(term) {
+                clauses.push("lower(r.path || '/' || e.display_path) GLOB ?");
+            } else {
+                clauses.push("instr(lower(r.path || '/' || e.display_path), ?) > 0");
+            }
             values.push(term.clone().into());
         }
         let predicate = if clauses.is_empty() {

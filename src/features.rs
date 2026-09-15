@@ -36,7 +36,7 @@ pub const EVERYTHING_FEATURES: &[Feature] = &[
     Feature { category: "Search", name: "Substring and case-insensitive search", description: "Match partial filenames immediately with an FTS trigram index.", status: FeatureStatus::Implemented },
     Feature { category: "Search", name: "Full-path matching", description: "Match explicit path: terms or apply ordinary terms to full paths with the Search menu toggle.", status: FeatureStatus::Implemented },
     Feature { category: "Search", name: "Boolean operators and grouping", description: "AND, OR, NOT, grouping, quoted text, and operator precedence.", status: FeatureStatus::Planned },
-    Feature { category: "Search", name: "Wildcards and character entities", description: "Asterisk/question-mark patterns, literal operators, and encoded characters.", status: FeatureStatus::Planned },
+    Feature { category: "Search", name: "Wildcards and character entities", description: "Whole-name * and ? wildcard patterns are implemented; literal character entities remain planned.", status: FeatureStatus::Partial },
     Feature { category: "Search", name: "Search modifiers", description: "Case, diacritics, whole-word, path, prefix, suffix, punctuation, whitespace, and regex modifiers.", status: FeatureStatus::Planned },
     Feature { category: "Search", name: "Regular expressions", description: "Regex mode and regex terms within otherwise normal searches.", status: FeatureStatus::Planned },
     Feature { category: "Search", name: "Property search functions", description: "Name, path, extension, type, size, dates, attributes, owner, hashes, media properties, parent/child, and other metadata functions.", status: FeatureStatus::Planned },

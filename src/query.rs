@@ -12,6 +12,10 @@ pub struct SearchQuery {
     pub match_path: bool,
 }
 
+pub fn has_wildcards(term: &str) -> bool {
+    term.contains('*') || term.contains('?')
+}
+
 pub fn parse(input: &str, options: SearchOptions) -> Result<SearchQuery> {
     let mut tokens = Vec::new();
     let mut current = String::new();

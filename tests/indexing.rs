@@ -88,3 +88,44 @@ fn searches_full_paths_explicitly_or_with_match_path() {
         .any(|r| r.name == "annual-report.txt"));
     assert!(index.search("path:", 20).is_err());
 }
+
+#[test]
+fn supports_case_insensitive_name_and_path_wildcards() {
+    let workspace = tempdir().unwrap();
+    let root = workspace.path().join("files");
+    fs::create_dir_all(root.join("target/logs")).unwrap();
+    fs::write(root.join("Report-FINAL.PDF"), b"").unwrap();
+    fs::write(root.join("data1.csv"), b"").unwrap();
+    fs::write(root.join("data12.csv"), b"").unwrap();
+    fs::write(root.join("target/logs/app.log"), b"").unwrap();
+    let database = workspace.path().join("index.db");
+    let mut index = Index::open(&database).unwrap();
+    scan(
+        &mut index,
+        &root,
+        &[database],
+        &EventSink::new(OutputMode::Silent),
+    )
+    .unwrap();
+
+    assert_eq!(index.search("*.pdf", 20).unwrap().len(), 1);
+    assert_eq!(index.search("data?.csv", 20).unwrap().len(), 1);
+    assert!(index
+        .search("path:*target/logs/*.log", 20)
+        .unwrap()
+        .iter()
+        .any(|r| r.name == "app.log"));
+    assert_eq!(
+        index.search("path:*target/logs/* *.log", 20).unwrap().len(),
+        1
+    );
+    assert!(index
+        .search_with_options(
+            "*target*",
+            20,
+            fastfind::query::SearchOptions { match_path: true }
+        )
+        .unwrap()
+        .iter()
+        .any(|r| r.name == "app.log"));
+}
