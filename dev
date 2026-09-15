@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TOOLCHAIN="$ROOT/.toolchain/root/usr"
+
+if [[ ! -x "$TOOLCHAIN/bin/cargo" ]]; then
+  echo "project-local Rust toolchain is missing" >&2
+  exit 1
+fi
+
+export PATH="$TOOLCHAIN/bin:$PATH"
+export LD_LIBRARY_PATH="$TOOLCHAIN/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec "$@"
