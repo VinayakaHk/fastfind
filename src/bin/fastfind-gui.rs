@@ -33,7 +33,11 @@ struct GuiArgs {
 
 #[derive(Debug)]
 enum WorkerCommand {
-    Search { request_id: u64, query: String },
+    Search {
+        request_id: u64,
+        query: String,
+        match_path: bool,
+    },
     Scan(PathBuf),
     FilesystemEvent(notify::Event),
     WatchError(String),
@@ -148,6 +152,7 @@ struct FastFindApp {
     roots: Vec<RootStatus>,
     filter: ResultFilter,
     case_sensitive: bool,
+    match_path: bool,
     sort_column: SortColumn,
     sort_descending: bool,
     health: String,
@@ -171,6 +176,7 @@ impl FastFindApp {
         let _ = commands.send(WorkerCommand::Search {
             request_id: 1,
             query: String::new(),
+            match_path: false,
         });
         ctx.set_visuals(egui::Visuals::light());
         Self {
@@ -184,6 +190,7 @@ impl FastFindApp {
             roots: Vec::new(),
             filter: ResultFilter::Everything,
             case_sensitive: false,
+            match_path: false,
             sort_column: SortColumn::Name,
             sort_descending: false,
             health: "initializing".to_string(),
@@ -207,6 +214,7 @@ impl FastFindApp {
         let _ = self.commands.send(WorkerCommand::Search {
             request_id: self.request_id,
             query: self.query.clone(),
+            match_path: self.match_path,
         });
         self.detail = "Searching…".to_string();
     }
@@ -449,7 +457,9 @@ impl FastFindApp {
             });
             ui.menu_button("Search", |ui| {
                 ui.checkbox(&mut self.case_sensitive, "Match Case");
-                ui.add_enabled(false, egui::Button::new("Match Path (planned)"));
+                if ui.checkbox(&mut self.match_path, "Match Path").changed() {
+                    self.send_search();
+                }
                 ui.add_enabled(false, egui::Button::new("Match Whole Word (planned)"));
                 ui.add_enabled(false, egui::Button::new("Regular Expressions (planned)"));
                 ui.separator();
@@ -686,6 +696,10 @@ impl eframe::App for FastFindApp {
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.label(format!("{} ms", self.query_latency_ms));
+                    if self.match_path {
+                        ui.separator();
+                        ui.label(RichText::new("PATH").strong());
+                    }
                     ui.separator();
                     ui.label(RichText::new(self.health.to_uppercase()).strong());
                 });
@@ -895,9 +909,17 @@ fn spawn_worker(
         let mut recovery_queued = false;
         while let Ok(command) = command_rx.recv() {
             match command {
-                WorkerCommand::Search { request_id, query } => {
+                WorkerCommand::Search {
+                    request_id,
+                    query,
+                    match_path,
+                } => {
                     let started = Instant::now();
-                    match index.search(&query, RESULT_LIMIT) {
+                    match index.search_with_options(
+                        &query,
+                        RESULT_LIMIT,
+                        fastfind::query::SearchOptions { match_path },
+                    ) {
                         Ok(results) => {
                             let _ = event_tx.send(WorkerEvent::Results {
                                 request_id,

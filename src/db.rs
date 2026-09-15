@@ -1,6 +1,6 @@
 use crate::model::{IndexedEntry, RootStatus, SearchResult};
 use anyhow::{Context, Result};
-use rusqlite::{params, Connection};
+use rusqlite::{params, params_from_iter, types::Value, Connection};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -210,41 +210,87 @@ impl Index {
     }
 
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<SearchResult>> {
-        let normalized = query.to_lowercase();
+        self.search_with_options(query, limit, crate::query::SearchOptions::default())
+    }
+
+    pub fn search_with_options(
+        &self,
+        query: &str,
+        limit: usize,
+        options: crate::query::SearchOptions,
+    ) -> Result<Vec<SearchResult>> {
+        let query = crate::query::parse(query, options)?;
+        if query.path_terms.is_empty() && !query.match_path && query.name_terms.len() == 1 {
+            return self.search_filename_term(&query.name_terms[0], limit);
+        }
+
+        let mut clauses = Vec::new();
+        let mut values = Vec::<Value>::new();
+        for term in &query.name_terms {
+            if query.match_path {
+                clauses.push("(instr(e.normalized_name, ?) > 0 OR instr(lower(r.path || '/' || e.display_path), ?) > 0)");
+                values.push(term.clone().into());
+                values.push(term.clone().into());
+            } else {
+                clauses.push("instr(e.normalized_name, ?) > 0");
+                values.push(term.clone().into());
+            }
+        }
+        for term in &query.path_terms {
+            clauses.push("instr(lower(r.path || '/' || e.display_path), ?) > 0");
+            values.push(term.clone().into());
+        }
+        let predicate = if clauses.is_empty() {
+            "1".to_string()
+        } else {
+            clauses.join(" AND ")
+        };
+        let sql = format!(
+            "SELECT e.id, r.path, e.display_path, e.display_name, e.kind, e.size, e.mtime_ns
+             FROM entries e JOIN roots r ON r.id=e.root_id
+             WHERE {predicate}
+             ORDER BY length(e.display_name), e.display_name LIMIT ?"
+        );
+        values.push((limit as i64).into());
+        self.query_results(&sql, params_from_iter(values.iter()))
+    }
+
+    fn search_filename_term(&self, normalized: &str, limit: usize) -> Result<Vec<SearchResult>> {
         let use_fts = normalized.chars().count() >= 3;
         let sql = if use_fts {
             "SELECT e.id, r.path, e.display_path, e.display_name, e.kind, e.size, e.mtime_ns
-             FROM entries_fts
-             JOIN entries e ON e.id=entries_fts.rowid
-             JOIN roots r ON r.id=e.root_id
-             WHERE entries_fts MATCH ?1
-             ORDER BY length(e.display_name), e.display_name
-             LIMIT ?2"
+             FROM entries_fts JOIN entries e ON e.id=entries_fts.rowid
+             JOIN roots r ON r.id=e.root_id WHERE entries_fts MATCH ?1
+             ORDER BY length(e.display_name), e.display_name LIMIT ?2"
         } else {
             "SELECT e.id, r.path, e.display_path, e.display_name, e.kind, e.size, e.mtime_ns
-             FROM entries e
-             JOIN roots r ON r.id=e.root_id
+             FROM entries e JOIN roots r ON r.id=e.root_id
              WHERE instr(e.normalized_name, ?1)>0
-             ORDER BY length(e.display_name), e.display_name
-             LIMIT ?2"
+             ORDER BY length(e.display_name), e.display_name LIMIT ?2"
         };
-        let search_term = if use_fts {
+        let term = if use_fts {
             format!("normalized_name:\"{}\"", normalized.replace('"', "\"\""))
         } else {
-            normalized
+            normalized.to_string()
         };
+        self.query_results(sql, params![term, limit as i64])
+    }
 
+    fn query_results<P: rusqlite::Params>(
+        &self,
+        sql: &str,
+        params: P,
+    ) -> Result<Vec<SearchResult>> {
         let mut statement = self.connection.prepare(sql)?;
-        let rows = statement.query_map(params![search_term, limit as i64], |row| {
+        let rows = statement.query_map(params, |row| {
             let root: String = row.get(1)?;
             let relative: String = row.get(2)?;
-            let path = Path::new(&root)
-                .join(relative)
-                .to_string_lossy()
-                .into_owned();
             Ok(SearchResult {
                 id: row.get(0)?,
-                path,
+                path: Path::new(&root)
+                    .join(relative)
+                    .to_string_lossy()
+                    .into_owned(),
                 name: row.get(3)?,
                 kind: crate::model::EntryKind::from_i64(row.get(4)?),
                 size: row.get::<_, i64>(5)? as u64,

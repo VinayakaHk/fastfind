@@ -32,6 +32,9 @@ enum Command {
         query: String,
         #[arg(short, long, default_value_t = 100)]
         limit: usize,
+        /// Match ordinary terms against full paths instead of names only
+        #[arg(long)]
+        match_path: bool,
     },
     /// Show indexed roots, freshness, counts, and health
     Status,
@@ -71,9 +74,17 @@ fn run() -> Result<()> {
                 println!("{}", serde_json::to_string(&outcome)?);
             }
         }
-        Command::Search { query, limit } => {
+        Command::Search {
+            query,
+            limit,
+            match_path,
+        } => {
             let started = Instant::now();
-            let results = index.search(&query, limit)?;
+            let results = index.search_with_options(
+                &query,
+                limit,
+                fastfind::query::SearchOptions { match_path },
+            )?;
             events.emit(&TelemetryEvent::QueryCompleted {
                 schema_version: 1,
                 timestamp_ms: now_ms(),

@@ -34,7 +34,7 @@ pub const EVERYTHING_FEATURES: &[Feature] = &[
     Feature { category: "Core", name: "Real-time index updates", description: "Reflect creates, deletes, moves, and renames through filesystem notifications.", status: FeatureStatus::Implemented },
     Feature { category: "Core", name: "Offline and private operation", description: "Run locally without analytics, remote calls, or user-data collection.", status: FeatureStatus::Implemented },
     Feature { category: "Search", name: "Substring and case-insensitive search", description: "Match partial filenames immediately with an FTS trigram index.", status: FeatureStatus::Implemented },
-    Feature { category: "Search", name: "Full-path matching", description: "Match terms against parent paths as well as names.", status: FeatureStatus::Planned },
+    Feature { category: "Search", name: "Full-path matching", description: "Match explicit path: terms or apply ordinary terms to full paths with the Search menu toggle.", status: FeatureStatus::Implemented },
     Feature { category: "Search", name: "Boolean operators and grouping", description: "AND, OR, NOT, grouping, quoted text, and operator precedence.", status: FeatureStatus::Planned },
     Feature { category: "Search", name: "Wildcards and character entities", description: "Asterisk/question-mark patterns, literal operators, and encoded characters.", status: FeatureStatus::Planned },
     Feature { category: "Search", name: "Search modifiers", description: "Case, diacritics, whole-word, path, prefix, suffix, punctuation, whitespace, and regex modifiers.", status: FeatureStatus::Planned },

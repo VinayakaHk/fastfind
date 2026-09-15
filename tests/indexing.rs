@@ -48,3 +48,43 @@ fn short_queries_use_substring_fallback() {
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "README");
 }
+
+#[test]
+fn searches_full_paths_explicitly_or_with_match_path() {
+    let workspace = tempdir().unwrap();
+    let root = workspace.path().join("files");
+    fs::create_dir_all(root.join("My Projects")).unwrap();
+    fs::write(root.join("My Projects/annual-report.txt"), b"").unwrap();
+    fs::write(root.join("outside.txt"), b"").unwrap();
+    let database = workspace.path().join("index.db");
+    let mut index = Index::open(&database).unwrap();
+    scan(
+        &mut index,
+        &root,
+        &[database],
+        &EventSink::new(OutputMode::Silent),
+    )
+    .unwrap();
+
+    assert!(!index
+        .search("projects", 20)
+        .unwrap()
+        .iter()
+        .any(|result| result.name == "annual-report.txt"));
+    assert!(index
+        .search("path:\"My Projects\"", 20)
+        .unwrap()
+        .iter()
+        .any(|r| r.name == "annual-report.txt"));
+    assert_eq!(index.search("path:projects annual", 20).unwrap().len(), 1);
+    assert!(index
+        .search_with_options(
+            "projects",
+            20,
+            fastfind::query::SearchOptions { match_path: true }
+        )
+        .unwrap()
+        .iter()
+        .any(|r| r.name == "annual-report.txt"));
+    assert!(index.search("path:", 20).is_err());
+}
